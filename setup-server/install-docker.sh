@@ -4,9 +4,18 @@ set -euo pipefail
 # Docker + Docker Compose installation script compatible with Ubuntu/Debian and Alpine
 # Asks at startup whether to add the current user to the 'docker' group and then installs/starts services.
 
-USER_NAME="$(whoami)"
+# Determine the target user to add to the docker group:
+# - If the script was invoked via sudo, prefer SUDO_USER (the real non-root user).
+# - Otherwise use the result of whoami.
+INVOKED_USER="$(whoami)"
+if [ -n "${SUDO_USER:-}" ] && [ "${SUDO_USER}" != "root" ]; then
+  USER_NAME="${SUDO_USER}"
+else
+  USER_NAME="${INVOKED_USER}"
+fi
+
 ADD_USER_NO_PROMPT=""
-read -r -p "Add current user '$USER_NAME' to the 'docker' group? [y/N] " add_user_answer
+read -r -p "Add user '$USER_NAME' to the 'docker' group? [y/N] " add_user_answer
 case "${add_user_answer:-n}" in
   [Yy]|[Yy][Ee][Ss]) ADD_USER_NO_PROMPT=1 ;;
   *) ADD_USER_NO_PROMPT=0 ;;
