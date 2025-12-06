@@ -20,7 +20,7 @@ fi
 
 # Check if user exists
 if id "$USERNAME" >/dev/null 2>&1; then
-  read -r -p "User '$USERNAME' already exists. Overwrite credentials / regenerate keys? [y/N] " yn
+  read -r -p "User '$USERNAME' already exists. Update credentials / ensure keys? [y/N] " yn
   case "${yn:-n}" in
     [Yy]|[Yy][Ee][Ss]) RECREATE_KEYS=1 ;;
     *) echo "Aborting."; exit 0 ;;
@@ -98,21 +98,25 @@ PRIVATE_KEY_PATH="$SSH_DIR/id_ed25519"
 
 # Generate SSH keypair as the new user if ssh-keygen available
 if command -v ssh-keygen >/dev/null 2>&1; then
-  # remove existing keys if regenerating
-  $SUDO rm -f "$PRIVATE_KEY_PATH" "$PRIVATE_KEY_PATH.pub" "$SSH_DIR/authorized_keys" || true
-  # generate keypair (ed25519 preferred)
-  if $SUDO -u "$USERNAME" ssh-keygen -t ed25519 -f "$PRIVATE_KEY_PATH" -N "" -q 2>/dev/null; then
-    :
+  if [ -f "$PRIVATE_KEY_PATH" ]; then
+    echo "SSH key pair already exists. Skipping generation."
   else
-    # fallback to rsa
-    $SUDO -u "$USERNAME" ssh-keygen -t rsa -b 4096 -f "$PRIVATE_KEY_PATH" -N "" -q || true
+    # generate keypair (ed25519 preferred)
+    if $SUDO -u "$USERNAME" ssh-keygen -t ed25519 -f "$PRIVATE_KEY_PATH" -N "" -q 2>/dev/null; then
+      :
+    else
+      # fallback to rsa
+      $SUDO -u "$USERNAME" ssh-keygen -t rsa -b 4096 -f "$PRIVATE_KEY_PATH" -N "" -q || true
+    fi
   fi
 
-  # Install public key to authorized_keys
+  # Install public key to authorized_keys if not present
   if [ -f "${PRIVATE_KEY_PATH}.pub" ]; then
-    $SUDO cp "${PRIVATE_KEY_PATH}.pub" "$SSH_DIR/authorized_keys"
-    $SUDO chown "$USERNAME":"$USERNAME" "$SSH_DIR/authorized_keys"
-    $SUDO chmod 600 "$SSH_DIR/authorized_keys"
+    if [ ! -f "$SSH_DIR/authorized_keys" ]; then
+      $SUDO cp "${PRIVATE_KEY_PATH}.pub" "$SSH_DIR/authorized_keys"
+      $SUDO chown "$USERNAME":"$USERNAME" "$SSH_DIR/authorized_keys"
+      $SUDO chmod 600 "$SSH_DIR/authorized_keys"
+    fi
     HAS_KEY=1
   else
     HAS_KEY=0
