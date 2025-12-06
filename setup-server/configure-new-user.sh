@@ -102,15 +102,16 @@ PRIVATE_KEY_PATH="$SSH_DIR/id_ed25519"
 
 # Generate SSH keypair as the new user if ssh-keygen available
 if command -v ssh-keygen >/dev/null 2>&1; then
+  KEYGEN_CMD="$(command -v ssh-keygen)"
   if [ -f "$PRIVATE_KEY_PATH" ]; then
     echo "SSH key pair already exists. Skipping generation."
   else
     # generate keypair (ed25519 preferred)
-    if $SUDO -u "$USERNAME" ssh-keygen -t ed25519 -f "$PRIVATE_KEY_PATH" -N "" -q 2>/dev/null; then
+    if $SUDO -u "$USERNAME" "$KEYGEN_CMD" -t ed25519 -f "$PRIVATE_KEY_PATH" -N "" -q 2>/dev/null; then
       :
     else
       # fallback to rsa
-      $SUDO -u "$USERNAME" ssh-keygen -t rsa -b 4096 -f "$PRIVATE_KEY_PATH" -N "" -q || true
+      $SUDO -u "$USERNAME" "$KEYGEN_CMD" -t rsa -b 4096 -f "$PRIVATE_KEY_PATH" -N "" -q || true
     fi
   fi
 
