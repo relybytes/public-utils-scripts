@@ -65,6 +65,10 @@ if ! command -v ssh-keygen >/dev/null 2>&1; then
       $SUDO apt-get update
       DEBIAN_FRONTEND=noninteractive $SUDO apt-get install -y openssh-client
       ;;
+    centos|rhel|fedora|amzn)
+      echo "Installing openssh-clients on RHEL/CentOS/Fedora..."
+      $SUDO yum install -y openssh-clients || $SUDO dnf install -y openssh-clients
+      ;;
     *)
       echo "Automatic installation of ssh-keygen not supported on OS: ${OS_ID:-unknown}. Please install ssh-keygen (openssh) manually." >&2
       ;;
@@ -142,7 +146,11 @@ if [ "$HAS_KEY" -eq 1 ]; then
   echo ""
   echo "Public key installed in $SSH_DIR/authorized_keys"
 else
-  echo "SSH keypair was not generated (ssh-keygen not available)."
+  if command -v ssh-keygen >/dev/null 2>&1; then
+    echo "SSH keypair was not generated (generation failed or public key missing)."
+  else
+    echo "SSH keypair was not generated (ssh-keygen not available)."
+  fi
   echo "You can add an authorized key manually to $SSH_DIR/authorized_keys"
 fi
 
